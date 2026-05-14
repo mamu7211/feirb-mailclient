@@ -5,6 +5,8 @@ using FluentAssertions;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
 namespace Feirb.Api.Tests.Data;
@@ -30,12 +32,23 @@ public class DatabaseSeederTests
     private static IConfiguration CreateConfiguration() =>
         new ConfigurationBuilder().Build();
 
+    private static IHostEnvironment CreateEnvironment(string? environmentName = null) =>
+        new TestHostEnvironment { EnvironmentName = environmentName ?? Environments.Development };
+
+    private sealed class TestHostEnvironment : IHostEnvironment
+    {
+        public string EnvironmentName { get; set; } = Environments.Development;
+        public string ApplicationName { get; set; } = "Feirb.Api.Tests";
+        public string ContentRootPath { get; set; } = AppContext.BaseDirectory;
+        public IFileProvider ContentRootFileProvider { get; set; } = new NullFileProvider();
+    }
+
     [Fact]
     public async Task SeedAsync_EmptyDatabase_CreatesUsersMailboxesAndSmtpSettingsAsync()
     {
         using var db = CreateInMemoryContext();
 
-        await DatabaseSeeder.SeedAsync(db, CreateLogger(), CreateDataProtection(), CreateConfiguration());
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), CreateDataProtection(), CreateConfiguration(), CreateEnvironment());
 
         var users = await db.Users.OrderBy(u => u.Username).ToListAsync();
         users.Should().HaveCount(2);
@@ -96,7 +109,7 @@ public class DatabaseSeederTests
         });
         await db.SaveChangesAsync();
 
-        await DatabaseSeeder.SeedAsync(db, CreateLogger(), CreateDataProtection(), CreateConfiguration());
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), CreateDataProtection(), CreateConfiguration(), CreateEnvironment());
 
         var users = await db.Users.ToListAsync();
         users.Should().HaveCount(2);
@@ -116,7 +129,7 @@ public class DatabaseSeederTests
         });
         await db.SaveChangesAsync();
 
-        await DatabaseSeeder.SeedAsync(db, CreateLogger(), CreateDataProtection(), CreateConfiguration());
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), CreateDataProtection(), CreateConfiguration(), CreateEnvironment());
 
         var settings = await db.SmtpSettings.ToListAsync();
         settings.Should().HaveCount(1);
@@ -129,8 +142,8 @@ public class DatabaseSeederTests
         using var db = CreateInMemoryContext();
         var dp = CreateDataProtection();
 
-        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration());
-        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration());
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration(), CreateEnvironment());
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration(), CreateEnvironment());
 
         (await db.Users.CountAsync()).Should().Be(2);
         (await db.Mailboxes.CountAsync()).Should().Be(2);
@@ -144,12 +157,50 @@ public class DatabaseSeederTests
         var dp = CreateDataProtection();
 
         // First seed creates everything
-        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration());
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration(), CreateEnvironment());
 
         // Second seed should not duplicate mailboxes
-        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration());
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration(), CreateEnvironment());
 
         var mailboxes = await db.Mailboxes.ToListAsync();
         mailboxes.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task SeedAsync_ProductionEnvironment_ThrowsAndSeedsNothingAsync()
+    {
+        using var db = CreateInMemoryContext();
+
+        var act = async () => await DatabaseSeeder.SeedAsync(
+            db,
+            CreateLogger(),
+            CreateDataProtection(),
+            CreateConfiguration(),
+            CreateEnvironment(Environments.Production));
+
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("*Production*");
+
+        (await db.Users.CountAsync()).Should().Be(0);
+        (await db.Mailboxes.CountAsync()).Should().Be(0);
+        (await db.SmtpSettings.CountAsync()).Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("Development")]
+    [InlineData("Staging")]
+    [InlineData("Testing")]
+    public async Task SeedAsync_NonProductionEnvironments_SeedsSuccessfullyAsync(string environmentName)
+    {
+        using var db = CreateInMemoryContext();
+
+        await DatabaseSeeder.SeedAsync(
+            db,
+            CreateLogger(),
+            CreateDataProtection(),
+            CreateConfiguration(),
+            CreateEnvironment(environmentName));
+
+        (await db.Users.CountAsync()).Should().Be(2);
     }
 }

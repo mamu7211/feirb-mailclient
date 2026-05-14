@@ -77,6 +77,8 @@ This seeds the database with:
 
 The seeding is idempotent — it checks whether the data already exists and skips if so.
 
+> **Production safety:** Seeding is blocked when `ASPNETCORE_ENVIRONMENT=Production`, even if `FEIRB_SEED_DATA=true` is set. Seeded accounts use well-known credentials and must never reach a production deployment.
+
 ## Component Showcase
 
 Feirb includes a built-in component playground at `/components-showcase` for viewing, interacting with, and documenting all UI primitives. No authentication required — just start the app and navigate to the route.

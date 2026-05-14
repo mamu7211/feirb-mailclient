@@ -80,6 +80,8 @@ When started via `.claude/skills/dev-harness/start.sh --seeding` (or with `FEIRB
 
 The seeding is idempotent — it checks whether the data already exists and skips if so.
 
+> **Production safety:** `DatabaseSeeder` refuses to run when `ASPNETCORE_ENVIRONMENT=Production`, even if `FEIRB_SEED_DATA=true` is set. Seeded accounts use well-known credentials and are intended for development and testing only. Attempting to seed in Production raises an exception and stops application startup.
+
 ## Development Workflow
 
 ### Branching
