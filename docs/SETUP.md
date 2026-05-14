@@ -209,6 +209,15 @@ docker volume rm mailclient-postgres-data
 dotnet run --project src/Feirb.AppHost
 ```
 
+> **One-time reset required (post #266):** The accumulated 28 EF Core migrations were squashed into a single `InitialSchema` migration on 2026-05-14. If your local dev DB was created before this change, the `__EFMigrationsHistory` table still references the old migration names and EF will refuse to start. Run the dev-harness cleanup script — or `docker volume rm <feirb-postgres-volume>` — to wipe the volume, then start with seeding to recreate everything from scratch:
+>
+> ```bash
+> .claude/skills/dev-harness/cleanup.sh
+> .claude/skills/dev-harness/start.sh --seeding
+> ```
+>
+> No production deployments exist yet, so this is a development-only concern.
+
 ### Clean Build
 
 ```bash
