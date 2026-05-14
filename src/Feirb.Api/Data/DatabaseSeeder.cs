@@ -10,11 +10,19 @@ internal static class DatabaseSeeder
     private const string _smtpPasswordPurpose = "MailboxSmtpPassword";
     private const string _imapSyncJobType = "imap-sync";
 
-    public static async Task SeedAsync(FeirbDbContext db, ILogger logger, IDataProtectionProvider dataProtection, IConfiguration configuration)
+    public static async Task SeedAsync(FeirbDbContext db, ILogger logger, IDataProtectionProvider dataProtection, IConfiguration configuration, IHostEnvironment environment)
     {
         ArgumentNullException.ThrowIfNull(db);
         ArgumentNullException.ThrowIfNull(logger);
         ArgumentNullException.ThrowIfNull(dataProtection);
+        ArgumentNullException.ThrowIfNull(environment);
+
+        // Defense-in-depth: refuse to seed in Production even if FEIRB_SEED_DATA=true.
+        // Seeded accounts use trivially guessable credentials and must never reach prod.
+        if (environment.IsProduction())
+            throw new InvalidOperationException(
+                "DatabaseSeeder.SeedAsync must not run in Production environment. " +
+                "Seeded accounts use well-known credentials and are intended for development/testing only.");
 
         var seeded = false;
 
