@@ -12,18 +12,77 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Feirb.Api.Data.Migrations
 {
     [DbContext(typeof(FeirbDbContext))]
-    [Migration("20260329185816_AddAvatars")]
-    partial class AddAvatars
+    [Migration("20260514080737_InitialSchema")]
+    partial class InitialSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.5")
+                .HasAnnotation("ProductVersion", "10.0.7")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("CachedMessageLabel", b =>
+                {
+                    b.Property<Guid>("CachedMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("LabelsId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("CachedMessageId", "LabelsId");
+
+                    b.HasIndex("LabelsId");
+
+                    b.ToTable("CachedMessageLabel");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.Address", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ContactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTime>("FirstSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("NormalizedEmail")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<int>("SeenCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ContactId");
+
+                    b.HasIndex("UserId", "NormalizedEmail")
+                        .IsUnique();
+
+                    b.ToTable("Addresses");
+                });
 
             modelBuilder.Entity("Feirb.Api.Data.Entities.Avatar", b =>
                 {
@@ -41,8 +100,8 @@ namespace Feirb.Api.Data.Migrations
 
                     b.Property<string>("EmailHash")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("character varying(32)");
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
 
                     b.Property<byte[]>("ImageData")
                         .IsRequired()
@@ -150,6 +209,127 @@ namespace Feirb.Api.Data.Migrations
                     b.ToTable("CachedMessages");
                 });
 
+            modelBuilder.Entity("Feirb.Api.Data.Entities.CachedMessageClassificationQueueItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AttemptNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("CachedMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<int>("Ordinal")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Ordinal"));
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CachedMessageId");
+
+                    b.HasIndex("Status", "Ordinal");
+
+                    b.ToTable("ClassificationQueueItems");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.ClassificationResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CachedMessageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ClassifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CachedMessageId")
+                        .IsUnique();
+
+                    b.ToTable("ClassificationResults");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.ClassificationRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Instruction")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ClassificationRules");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.Contact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Contacts");
+                });
+
             modelBuilder.Entity("Feirb.Api.Data.Entities.DashboardLayout", b =>
                 {
                     b.Property<Guid>("Id")
@@ -207,11 +387,48 @@ namespace Feirb.Api.Data.Migrations
                     b.ToTable("JobExecutions");
                 });
 
+            modelBuilder.Entity("Feirb.Api.Data.Entities.JobExecutionLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("JobExecutionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Level")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<string>("Metadata")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
+
+                    b.Property<DateTimeOffset>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("JobExecutionId");
+
+                    b.ToTable("JobExecutionLogs");
+                });
+
             modelBuilder.Entity("Feirb.Api.Data.Entities.JobSettings", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("Configuration")
+                        .HasMaxLength(4096)
+                        .HasColumnType("character varying(4096)");
 
                     b.Property<string>("Cron")
                         .IsRequired()
@@ -231,6 +448,10 @@ namespace Feirb.Api.Data.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("JobType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<DateTimeOffset?>("LastRunAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -238,8 +459,18 @@ namespace Feirb.Api.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
 
+                    b.Property<Guid?>("ResourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ResourceType")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<Guid>("RowVersion")
                         .IsConcurrencyToken()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
@@ -247,17 +478,34 @@ namespace Feirb.Api.Data.Migrations
                     b.HasIndex("JobName")
                         .IsUnique();
 
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("JobType", "ResourceId");
+
                     b.ToTable("JobSettings");
 
                     b.HasData(
                         new
                         {
                             Id = new Guid("a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
+                            Configuration = "{\"batchSize\":10}",
                             Cron = "0 * * * * ?",
                             Description = "Classifies new mail messages using AI-powered label detection.",
                             Enabled = false,
                             JobName = "Classification",
+                            JobType = "classification",
                             RowVersion = new Guid("00000000-0000-0000-0000-000000000001")
+                        },
+                        new
+                        {
+                            Id = new Guid("b2c3d4e5-f6a7-8901-bcde-f12345678901"),
+                            Configuration = "{\"retentionDays\":30}",
+                            Cron = "0 0 3 * * ?",
+                            Description = "Deletes old job execution logs based on configurable retention threshold.",
+                            Enabled = true,
+                            JobName = "Log Retention Cleanup",
+                            JobType = "log-retention-cleanup",
+                            RowVersion = new Guid("00000000-0000-0000-0000-000000000002")
                         });
                 });
 
@@ -329,8 +577,10 @@ namespace Feirb.Api.Data.Migrations
                     b.Property<int>("ImapPort")
                         .HasColumnType("integer");
 
-                    b.Property<bool>("ImapUseTls")
-                        .HasColumnType("boolean");
+                    b.Property<string>("ImapTlsMode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("ImapUsername")
                         .IsRequired()
@@ -344,11 +594,6 @@ namespace Feirb.Api.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
-
-                    b.Property<int>("PollIntervalMinutes")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(60);
 
                     b.Property<string>("SmtpEncryptedPassword")
                         .HasMaxLength(1024)
@@ -365,8 +610,10 @@ namespace Feirb.Api.Data.Migrations
                     b.Property<bool>("SmtpRequiresAuth")
                         .HasColumnType("boolean");
 
-                    b.Property<bool>("SmtpUseTls")
-                        .HasColumnType("boolean");
+                    b.Property<string>("SmtpTlsMode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
 
                     b.Property<string>("SmtpUsername")
                         .IsRequired()
@@ -451,11 +698,13 @@ namespace Feirb.Api.Data.Migrations
                     b.Property<bool>("RequiresAuth")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("TlsMode")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("UseTls")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("Username")
                         .HasMaxLength(256)
@@ -574,6 +823,39 @@ namespace Feirb.Api.Data.Migrations
                     b.ToTable("DataProtectionKeys");
                 });
 
+            modelBuilder.Entity("CachedMessageLabel", b =>
+                {
+                    b.HasOne("Feirb.Api.Data.Entities.CachedMessage", null)
+                        .WithMany()
+                        .HasForeignKey("CachedMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Feirb.Api.Data.Entities.Label", null)
+                        .WithMany()
+                        .HasForeignKey("LabelsId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.Address", b =>
+                {
+                    b.HasOne("Feirb.Api.Data.Entities.Contact", "Contact")
+                        .WithMany("Addresses")
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("Feirb.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Contact");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Feirb.Api.Data.Entities.CachedAttachment", b =>
                 {
                     b.HasOne("Feirb.Api.Data.Entities.CachedMessage", "CachedMessage")
@@ -596,6 +878,50 @@ namespace Feirb.Api.Data.Migrations
                     b.Navigation("Mailbox");
                 });
 
+            modelBuilder.Entity("Feirb.Api.Data.Entities.CachedMessageClassificationQueueItem", b =>
+                {
+                    b.HasOne("Feirb.Api.Data.Entities.CachedMessage", "CachedMessage")
+                        .WithMany()
+                        .HasForeignKey("CachedMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CachedMessage");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.ClassificationResult", b =>
+                {
+                    b.HasOne("Feirb.Api.Data.Entities.CachedMessage", "CachedMessage")
+                        .WithMany()
+                        .HasForeignKey("CachedMessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CachedMessage");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.ClassificationRule", b =>
+                {
+                    b.HasOne("Feirb.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.Contact", b =>
+                {
+                    b.HasOne("Feirb.Api.Data.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("Feirb.Api.Data.Entities.DashboardLayout", b =>
                 {
                     b.HasOne("Feirb.Api.Data.Entities.User", "User")
@@ -616,6 +942,25 @@ namespace Feirb.Api.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("JobSettings");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.JobExecutionLog", b =>
+                {
+                    b.HasOne("Feirb.Api.Data.Entities.JobExecution", "JobExecution")
+                        .WithMany("Logs")
+                        .HasForeignKey("JobExecutionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("JobExecution");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.JobSettings", b =>
+                {
+                    b.HasOne("Feirb.Api.Data.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Feirb.Api.Data.Entities.Label", b =>
@@ -665,6 +1010,16 @@ namespace Feirb.Api.Data.Migrations
             modelBuilder.Entity("Feirb.Api.Data.Entities.CachedMessage", b =>
                 {
                     b.Navigation("Attachments");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.Contact", b =>
+                {
+                    b.Navigation("Addresses");
+                });
+
+            modelBuilder.Entity("Feirb.Api.Data.Entities.JobExecution", b =>
+                {
+                    b.Navigation("Logs");
                 });
 
             modelBuilder.Entity("Feirb.Api.Data.Entities.JobSettings", b =>
