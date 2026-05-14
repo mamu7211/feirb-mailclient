@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Feirb.Api.Data;
 using Feirb.Api.Data.Entities;
+using Feirb.Shared;
 using Feirb.Shared.Admin.Jobs;
 using Feirb.Shared.Auth;
 using Feirb.Shared.Settings;
@@ -148,7 +149,53 @@ public class JobSettingsEndpointsTests : IDisposable
         var response = await _client.GetAsync($"/api/jobs/{job.Id}/executions?page=1&pageSize=2");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<PaginatedJobExecutionsResponse>();
+        var result = await response.Content.ReadFromJsonAsync<PaginatedResponse<JobExecutionResponse>>();
+        result.Should().NotBeNull();
+        result!.TotalCount.Should().Be(3);
+        result.Items.Should().HaveCount(2);
+        result.Page.Should().Be(1);
+        result.PageSize.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task GetJobExecutionLogs_AsAdmin_ReturnsPaginatedResultAsync()
+    {
+        var tokens = await SetupAndLoginAsAdminAsync();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+
+        var jobs = await _client.GetFromJsonAsync<List<JobSettingsResponse>>("/api/jobs");
+        var job = jobs![0];
+
+        var executionId = Guid.NewGuid();
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<FeirbDbContext>();
+            db.JobExecutions.Add(new JobExecution
+            {
+                Id = executionId,
+                JobSettingsId = job.Id,
+                StartedAt = DateTime.UtcNow,
+                FinishedAt = DateTime.UtcNow.AddSeconds(1),
+                Status = JobExecutionStatus.Success,
+            });
+            for (var i = 0; i < 3; i++)
+            {
+                db.JobExecutionLogs.Add(new JobExecutionLog
+                {
+                    Id = Guid.NewGuid(),
+                    JobExecutionId = executionId,
+                    Timestamp = DateTimeOffset.UtcNow.AddSeconds(i),
+                    Level = JobExecutionLogLevel.Info,
+                    Message = $"log entry {i}",
+                });
+            }
+            await db.SaveChangesAsync();
+        }
+
+        var response = await _client.GetAsync($"/api/jobs/{job.Id}/executions/{executionId}/logs?page=1&pageSize=2");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var result = await response.Content.ReadFromJsonAsync<PaginatedResponse<JobExecutionLogResponse>>();
         result.Should().NotBeNull();
         result!.TotalCount.Should().Be(3);
         result.Items.Should().HaveCount(2);

@@ -1,6 +1,7 @@
 @page "/admin/jobs/{Id:guid}"
 @attribute [Authorize(Policy = "RequireAdmin")]
 @using System.Text.Json
+@using Feirb.Shared
 @using Feirb.Shared.Admin.Jobs
 @using Feirb.Web.Services
 @inject HttpClient Http
@@ -139,7 +140,7 @@ else if (_model is not null)
     private bool _isSaving;
     private string? _errorMessage;
     private string _selectedPreset = "custom";
-    private PaginatedJobExecutionsResponse? _executions;
+    private PaginatedResponse<JobExecutionResponse>? _executions;
     private bool _executionsLoading;
     private int _execPage = 1;
     private int _execPageSize = 10;
@@ -222,7 +223,7 @@ else if (_model is not null)
         _executionsLoading = true;
         try
         {
-            _executions = await Http.GetFromJsonAsync<PaginatedJobExecutionsResponse>(
+            _executions = await Http.GetFromJsonAsync<PaginatedResponse<JobExecutionResponse>>(
                 $"/api/jobs/{Id}/executions?page={_execPage}&pageSize={_execPageSize}");
             if (_executions is not null)
                 _execTotalPages = (int)Math.Ceiling((double)_executions.TotalCount / _execPageSize);

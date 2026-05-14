@@ -1,5 +1,6 @@
 using Feirb.Api.Data;
 using Feirb.Api.Data.Entities;
+using Feirb.Shared;
 using Feirb.Shared.Admin.Jobs;
 using Microsoft.EntityFrameworkCore;
 using Quartz;
@@ -80,7 +81,7 @@ public class JobService(
         return MapToResponse(job);
     }
 
-    public async Task<PaginatedJobExecutionsResponse?> GetExecutionsAsync(
+    public async Task<PaginatedResponse<JobExecutionResponse>?> GetExecutionsAsync(
         Guid jobId, Guid userId, bool isAdmin, int page, int pageSize,
         CancellationToken cancellationToken = default)
     {
@@ -111,7 +112,7 @@ public class JobService(
                 e.Error))
             .ToListAsync(cancellationToken);
 
-        return new PaginatedJobExecutionsResponse(items, totalCount, page, pageSize);
+        return new PaginatedResponse<JobExecutionResponse>(items, page, pageSize, totalCount);
     }
 
     public async Task<JobExecutionResponse?> GetExecutionByIdAsync(
@@ -140,7 +141,7 @@ public class JobService(
         return execution;
     }
 
-    public async Task<PaginatedJobExecutionLogsResponse?> GetExecutionLogsAsync(
+    public async Task<PaginatedResponse<JobExecutionLogResponse>?> GetExecutionLogsAsync(
         Guid jobId, Guid executionId, Guid userId, bool isAdmin, int page, int pageSize,
         CancellationToken cancellationToken = default)
     {
@@ -176,7 +177,7 @@ public class JobService(
                 l.Message))
             .ToListAsync(cancellationToken);
 
-        return new PaginatedJobExecutionLogsResponse(items, totalCount, page, pageSize);
+        return new PaginatedResponse<JobExecutionLogResponse>(items, page, pageSize, totalCount);
     }
 
     public async Task<JobSettingsResponse?> UpdateAsync(

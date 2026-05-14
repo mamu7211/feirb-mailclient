@@ -6,4 +6,4 @@ public record MessageListResponse(
     int PageSize,
     int TotalCount,
     int PendingCount,
-    bool JobPaused);
+    bool JobPaused) : PaginatedResponse<MessageListItemResponse>(Items, Page, PageSize, TotalCount);
