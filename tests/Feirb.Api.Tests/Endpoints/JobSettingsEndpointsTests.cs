@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Feirb.Api.Data;
 using Feirb.Api.Data.Entities;
+using Feirb.Shared;
 using Feirb.Shared.Admin.Jobs;
 using Feirb.Shared.Auth;
 using Feirb.Shared.Settings;
@@ -148,7 +149,7 @@ public class JobSettingsEndpointsTests : IDisposable
         var response = await _client.GetAsync($"/api/jobs/{job.Id}/executions?page=1&pageSize=2");
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
-        var result = await response.Content.ReadFromJsonAsync<PaginatedJobExecutionsResponse>();
+        var result = await response.Content.ReadFromJsonAsync<PaginatedResponse<JobExecutionResponse>>();
         result.Should().NotBeNull();
         result!.TotalCount.Should().Be(3);
         result.Items.Should().HaveCount(2);

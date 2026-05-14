@@ -1,5 +1,6 @@
 @page "/admin/jobs/{JobId:guid}/executions/{ExecutionId:guid}"
 @attribute [Authorize(Policy = "RequireAdmin")]
+@using Feirb.Shared
 @using Feirb.Shared.Admin.Jobs
 @using Feirb.Web.Services
 @inject HttpClient Http
@@ -123,7 +124,7 @@ else
     public Guid ExecutionId { get; set; }
 
     private JobExecutionResponse? _execution;
-    private PaginatedJobExecutionLogsResponse? _logs;
+    private PaginatedResponse<JobExecutionLogResponse>? _logs;
     private bool _isLoading = true;
     private bool _notFound;
     private bool _logsLoading;
@@ -188,7 +189,7 @@ else
         _logsLoading = true;
         try
         {
-            _logs = await Http.GetFromJsonAsync<PaginatedJobExecutionLogsResponse>(
+            _logs = await Http.GetFromJsonAsync<PaginatedResponse<JobExecutionLogResponse>>(
                 $"/api/jobs/{JobId}/executions/{ExecutionId}/logs?page={_logsPage}&pageSize={_logsPageSize}");
             if (_logs is not null)
                 _logsTotalPages = (int)Math.Ceiling((double)_logs.TotalCount / _logsPageSize);
