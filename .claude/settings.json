@@ -111,7 +111,9 @@
       "mcp__playwright__browser_wait_for",
       "mcp__postgres__query",
       "mcp__postgres__list_tables",
-      "mcp__postgres__describe_table"
+      "mcp__postgres__describe_table",
+      "Write(**/.claude/worktrees/**)",
+      "Edit(**/.claude/worktrees/**)"
     ],
     "deny": [
       "Bash(git push --force:*)",
