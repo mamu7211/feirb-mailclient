@@ -87,6 +87,8 @@ podman info
 
 The dev-harness scripts and `postgres-mcp.sh` prefer `podman` and fall back to `docker`. `tests/run-tests.sh` (containerized Bruno/Playwright suite) needs `docker compose` or `podman-compose`.
 
+> **Ubuntu with Podman:** if the `docker` command is the Podman emulation (it prints "Emulate Docker CLI using podman"), `docker compose` talks to Podman's API socket, which is not enabled by default. Enable it once with `systemctl --user enable --now podman.socket` (see [Troubleshooting](#cannot-connect-to-the-docker-daemon-podman-socket-not-running)).
+
 ### 4. Aspire CLI (recommended)
 
 ```bash
@@ -377,6 +379,18 @@ docker info      # or: podman info
 ```
 
 With Podman, make sure `ASPIRE_CONTAINER_RUNTIME=podman` is exported in the shell that starts Aspire. With Docker on Linux, your user must be in the `docker` group (log out and back in after `sudo usermod -aG docker "$USER"`).
+
+### Cannot connect to the Docker daemon (Podman socket not running)
+
+`tests/run-tests.sh` (or `docker compose` in general) fails with `Cannot connect to the Docker daemon at unix:///run/user/1000/podman/podman.sock` when the `docker` command is the Podman emulation and Podman's API socket is not running. A follow-up error such as `Can't add file ... to tar: io: read/write on closed pipe` is only a consequence of the failed connection. Enable the rootless socket (no `sudo` needed) and check that it works:
+
+```bash
+systemctl --user enable --now podman.socket
+ls -l /run/user/$(id -u)/podman/podman.sock
+docker info
+```
+
+Two messages are harmless and can be ignored: `Emulate Docker CLI using podman` (silence it with `sudo touch /etc/containers/nodocker`) and `Docker Compose is configured to build using Bake, but buildkit isn't enabled`.
 
 ### `aspire`, `dotnet` or `npx` not found
 
