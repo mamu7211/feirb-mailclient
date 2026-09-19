@@ -26,7 +26,7 @@
 | Tool | Purpose |
 |------|---------|
 | [Aspire CLI](https://aspire.dev/get-started/install-cli/) | `aspire start`, `aspire describe`, `aspire logs`; also the `aspire` MCP server in `.mcp.json` (`aspire agent mcp`) |
-| [Node.js](https://nodejs.org/) LTS (22+) incl. `npm`/`npx` | Playwright MCP, Postgres MCP, Playwright E2E tests (`tests/playwright`), Bruno API tests (`npx bru`) |
+| [Node.js](https://nodejs.org/) LTS (22+) incl. `npm`/`npx` | Playwright MCP, Postgres MCP, Playwright E2E tests (`tests/playwright`) and Bruno API tests (`npx @usebruno/cli`) when run on the host instead of in containers |
 | [GitHub CLI (`gh`)](https://cli.github.com/) | Issue and PR management |
 | [Claude Code](https://claude.com/claude-code) | AI-assisted development; project skills and MCP servers live in `.claude/` and `.mcp.json` |
 
@@ -251,6 +251,16 @@ git commit -m "feat(web): add mail list component with pagination"
 
 ### Running Tests
 
+There are three test layers (details in the `run-tests` skill):
+
+| Layer | Location | Needs |
+|-------|----------|-------|
+| Unit / integration (xUnit) | `tests/Feirb.Api.Tests`, `tests/Feirb.Web.Tests` | .NET SDK only, no containers (EF Core in-memory provider) |
+| API contract tests (Bruno) | `tests/bruno` | Node.js on the host, or the container stack below |
+| Browser E2E tests (Playwright) | `tests/playwright` | Node.js plus browsers on the host, or the container stack below |
+
+**1. Unit and integration tests**
+
 ```bash
 # Run all tests
 dotnet test
@@ -264,6 +274,34 @@ dotnet test --verbosity normal
 # Filter by test name
 dotnet test --filter "MailService_GetMessages"
 ```
+
+**2. Full stack in containers (Bruno + Playwright, no Node.js needed on the host)**
+
+```bash
+tests/run-tests.sh
+```
+
+The script needs `docker compose` or `podman-compose`. It builds the API image, starts PostgreSQL and GreenMail with seed data (`tests/docker-compose.test.yml`), runs the Bruno and Playwright suites inside their own containers and tears everything down afterwards. The first run downloads several base images (including the Playwright image) and takes a while.
+
+**3. Bruno and Playwright against a running local instance**
+
+Start the app first (`.claude/skills/dev-harness/start.sh --seeding`), and install [Node.js](#5-nodejs-recommended). The seeded users are `admin` / `password` and `alice` / `password`.
+
+```bash
+# Bruno: no install needed, the CLI is fetched by npx (the `bru` binary comes from @usebruno/cli)
+cd tests/bruno
+npx @usebruno/cli run --env local
+
+# Playwright: install dependencies and the Chromium browser once
+cd tests/playwright
+npm ci
+npx playwright install --with-deps chromium   # --with-deps installs system libraries via sudo
+
+# Run with the seeded admin (the container stack passes the same values)
+ADMIN_USERNAME=admin ADMIN_PASSWORD=password npx playwright test
+```
+
+Playwright targets `https://localhost:7272` by default; set `BASE_URL` for another address. Bruno variables such as the login token only live within one `bru run` invocation, so run the collection (or a folder together with `01-auth/login.bru`) in a single command.
 
 ### Code Formatting
 
