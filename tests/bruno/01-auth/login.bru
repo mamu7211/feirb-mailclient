@@ -20,7 +20,19 @@ body:json {
 script:post-response {
   if (res.status === 200) {
     bru.setVar("accessToken", res.body.accessToken);
-    bru.setVar("refreshToken", res.body.refreshToken);
+
+    // The refresh token is delivered as an HttpOnly cookie (see PR #236), not in the
+    // response body. Bruno's CLI runner does not maintain a cookie jar across requests
+    // in a run, so we capture the raw Set-Cookie value here and forward it explicitly
+    // as a `Cookie` header on the refresh request.
+    var setCookie = res.headers["set-cookie"];
+    if (setCookie) {
+      var cookieHeader = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+      var match = cookieHeader.match(/^refreshToken=([^;]+)/);
+      if (match) {
+        bru.setVar("refreshTokenCookie", match[1]);
+      }
+    }
   }
 }
 
@@ -33,8 +45,12 @@ tests {
     expect(res.body.accessToken).to.be.a("string");
   });
 
-  test("should return refresh token", function() {
-    expect(res.body.refreshToken).to.be.a("string");
+  test("should set refresh token as an HttpOnly cookie", function() {
+    var setCookie = res.headers["set-cookie"];
+    var cookieHeader = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+    expect(cookieHeader).to.be.a("string");
+    expect(cookieHeader).to.include("refreshToken=");
+    expect(cookieHeader.toLowerCase()).to.include("httponly");
   });
 
   test("should return expiry", function() {
