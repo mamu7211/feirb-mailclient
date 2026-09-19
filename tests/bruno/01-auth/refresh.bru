@@ -6,24 +6,36 @@ meta {
 
 post {
   url: {{baseUrl}}/api/auth/refresh
-  body: json
+  body: none
   auth: none
 }
 
-body:json {
-  {
-    "refreshToken": "{{refreshToken}}"
-  }
+headers {
+  Cookie: refreshToken={{refreshTokenCookie}}
 }
 
 script:post-response {
   if (res.status === 200) {
     bru.setVar("accessToken", res.body.accessToken);
-    bru.setVar("refreshToken", res.body.refreshToken);
+
+    // The rotated refresh token also arrives as a cookie; capture it the same way as login
+    // so any later request in the run keeps using a valid cookie value.
+    var setCookie = res.headers["set-cookie"];
+    if (setCookie) {
+      var cookieHeader = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+      var match = cookieHeader.match(/^refreshToken=([^;]+)/);
+      if (match) {
+        bru.setVar("refreshTokenCookie", match[1]);
+      }
+    }
   }
 }
 
 tests {
+  // The refresh token now travels as an HttpOnly cookie (see PR #236). Bruno's CLI runner
+  // does not forward cookies between requests automatically, so login.bru's post-response
+  // script captures the raw Set-Cookie value and this request forwards it explicitly via
+  // the `Cookie` header above.
   test("should return 200", function() {
     expect(res.status).to.equal(200);
   });
@@ -32,7 +44,11 @@ tests {
     expect(res.body.accessToken).to.be.a("string");
   });
 
-  test("should return new refresh token", function() {
-    expect(res.body.refreshToken).to.be.a("string");
+  test("should set a rotated refresh token cookie", function() {
+    var setCookie = res.headers["set-cookie"];
+    var cookieHeader = Array.isArray(setCookie) ? setCookie[0] : setCookie;
+    expect(cookieHeader).to.be.a("string");
+    expect(cookieHeader).to.include("refreshToken=");
+    expect(cookieHeader.toLowerCase()).to.include("httponly");
   });
 }

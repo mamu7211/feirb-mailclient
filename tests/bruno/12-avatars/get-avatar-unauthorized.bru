@@ -1,5 +1,5 @@
 meta {
-  name: Get Avatar Anonymous
+  name: Get Avatar Anonymous - No Content
   type: http
   seq: 9
 }
@@ -11,7 +11,9 @@ get {
 }
 
 tests {
-  test("should return 404 for non-existent avatar", function() {
-    expect(res.status).to.equal(404);
+  // The endpoint is anonymous by design (avatars are public), and the API returns 204
+  // (not 404) when no avatar exists for a hash (see PR #225).
+  test("should return 204 for non-existent avatar", function() {
+    expect(res.status).to.equal(204);
   });
 }

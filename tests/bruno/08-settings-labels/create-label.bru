@@ -34,7 +34,8 @@ tests {
   });
 
   test("should return label data", function() {
-    expect(res.body.name).to.equal("Bruno Test Label");
+    // The API normalizes label names to lowercase (see PR #232).
+    expect(res.body.name).to.equal("bruno test label");
     expect(res.body.color).to.equal("#FF5733");
     expect(res.body.description).to.equal("A test label created by Bruno");
     expect(res.body.id).to.be.a("string");

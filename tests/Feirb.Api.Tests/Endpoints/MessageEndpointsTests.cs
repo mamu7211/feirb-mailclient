@@ -461,6 +461,29 @@ public class MessageEndpointsTests : IDisposable
     }
 
     [Fact]
+    public async Task ClassifyMessage_NotFound_Returns404EvenWithUnconfiguredChatClientAsync()
+    {
+        // Reproduces a production bug: the real Program.cs Ollama/IChatClient registration
+        // throws InvalidOperationException on first resolution when no connection string is
+        // configured (e.g. the Bruno/Playwright docker-compose test stack). Because
+        // IClassificationService used to be bound as a minimal-API parameter, DI resolved it
+        // - and transitively the chat client - before the handler body's not-found check ran,
+        // turning every classify call for an unknown message into a 500. The service must now
+        // be resolved lazily, after the message lookup, so this still returns 404.
+        _client.Dispose();
+        _factory.Dispose();
+        _factory = TestWebApplicationFactory.Create($"TestDb-{Guid.NewGuid()}", useRealChatClient: true);
+        _client = _factory.CreateClient();
+
+        var tokens = await SetupAndLoginAsAdminAsync();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+
+        var response = await _client.PostAsync($"/api/mail/messages/{Guid.NewGuid()}/classify?dryRun=true", content: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task ClassifyMessage_OtherUserMessage_Returns404Async()
     {
         var stub = new StubClassificationService(
