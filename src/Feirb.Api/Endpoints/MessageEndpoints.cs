@@ -7,6 +7,7 @@ using Feirb.Api.Services;
 using Feirb.Shared.AddressBook;
 using Feirb.Shared.Mail;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Localization;
 
 namespace Feirb.Api.Endpoints;
@@ -229,7 +230,6 @@ public static class MessageEndpoints
         Guid id,
         HttpContext httpContext,
         FeirbDbContext db,
-        IClassificationService classificationService,
         IStringLocalizer<ApiMessages> localizer,
         CancellationToken cancellationToken,
         bool dryRun = true)
@@ -244,6 +244,10 @@ public static class MessageEndpoints
         if (message is null)
             return Results.NotFound(new { message = localizer["MessageNotFound"].Value });
 
+        // Resolved lazily (rather than as a minimal-API parameter) so an unconfigured Ollama
+        // client only fails classification of a real message, not this not-found check: DI
+        // resolves parameter-bound services before the handler body runs.
+        var classificationService = httpContext.RequestServices.GetRequiredService<IClassificationService>();
         var detailed = await classificationService.ClassifyDetailedAsync(message, cancellationToken);
 
         // Backend unavailable (Ollama down or timeout) — surface as a hard failure so the
