@@ -191,6 +191,18 @@ Shell scripts in `.claude/skills/dev-harness/` for autonomous app interaction:
 - **Adding a new locale:** Create `.{locale}.resx` files in both `Resources/` directories, add culture code to `supportedCultures` in `Feirb.Api/Program.cs`, add option to `LanguageSwitcher.razor`
 - **Adding a new string:** Add key to all `.resx` files (default + all locales), use `L["Key"]` in components or `localizer["Key"]` in API endpoints
 
+## Multi-Agent Workflow (`/flow`)
+
+Use `/flow <issue#|description>` for features and non-trivial fixes. The main session orchestrates; role agents in `.claude/agents/` do the work, each with its model set in the frontmatter:
+
+| Agent | Model | Role |
+|-------|-------|------|
+| `coder` | Sonnet | Implements one work package in its own git worktree |
+| `tester` | Sonnet | Fills test gaps, runs xUnit/Bruno/Playwright, classifies failures |
+| `reviewer` | Opus | Read-only review against spec and CLAUDE.md, severity-ranked findings |
+
+Phases: intake → `/grill-me` (spec approved by the user) → plan → coder → tester → reviewer (max. two fix loops) → PR. Role agents never push, open PRs or merge. The container test stack is exclusive: run it as `flock /tmp/feirb-test-stack.lock tests/run-tests.sh`. Skip the flow for typos, one-line fixes, docs-only changes and dependency bumps.
+
 ## UI/UX Work (`/implement-ui`)
 
 **You MUST invoke the `/implement-ui` skill before touching any Razor file for UI/UX work** — new pages, new components, layout changes, or non-trivial styling. The skill enforces the shared component library, documents hard rules (Button/Icon/Card/CircularButton usage), and captures project-wide patterns like the toolbar actions convention on edit/detail pages.
