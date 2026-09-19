@@ -15,11 +15,11 @@ internal static class DatabaseSeeder
         ArgumentNullException.ThrowIfNull(dataProtection);
         ArgumentNullException.ThrowIfNull(environment);
 
-        // Defense-in-depth: refuse to seed in Production even if FEIRB_SEED_DATA=true.
-        // Seeded accounts use trivially guessable credentials and must never reach prod.
-        if (environment.IsProduction())
+        // Defense-in-depth: refuse to seed outside Development even if FEIRB_SEED_DATA=true.
+        // Seeded accounts use trivially guessable credentials and must never reach prod (or any other non-dev environment).
+        if (!environment.IsDevelopment())
             throw new InvalidOperationException(
-                "DatabaseSeeder.SeedAsync must not run in Production environment. " +
+                $"DatabaseSeeder.SeedAsync must not run in the {environment.EnvironmentName} environment. " +
                 "Seeded accounts use well-known credentials and are intended for development/testing only.");
 
         var seeded = false;

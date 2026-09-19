@@ -9,6 +9,8 @@ args: issue_number
 
 Start working on a feature tracked by a GitHub issue.
 
+> For larger features, prefer `/flow {issue_number}`: it runs `/grill-me` first and delegates implementation, testing and review to the `coder`, `tester` and `reviewer` agents. This skill is the single-session variant.
+
 ## Steps
 
 1. **Read the issue** from GitHub:

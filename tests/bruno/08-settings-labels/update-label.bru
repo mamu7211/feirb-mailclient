@@ -28,7 +28,8 @@ tests {
   });
 
   test("should return updated label", function() {
-    expect(res.body.name).to.equal("Bruno Test Label Updated");
+    // The API normalizes label names to lowercase (see PR #232).
+    expect(res.body.name).to.equal("bruno test label updated");
     expect(res.body.color).to.equal("#1D76DB");
     expect(res.body.description).to.equal("Updated description");
   });

@@ -84,6 +84,7 @@
       "Bash(.claude/skills/dev-harness/logs.sh)",
       "Bash(.claude/skills/dev-harness/logs.sh *)",
       "Bash(./run-tests.sh)",
+      "Bash(flock /tmp/feirb-test-stack.lock tests/run-tests.sh:*)",
       "WebSearch",
       "WebFetch(domain:learn.microsoft.com)",
       "WebFetch(domain:nuget.org)",

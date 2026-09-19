@@ -5,6 +5,11 @@ services:
       POSTGRES_USER: feirb
       POSTGRES_PASSWORD: feirb
       POSTGRES_DB: feirb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feirb -d feirb"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
 
   greenmail:
     image: docker.io/greenmail/standalone
@@ -30,11 +35,16 @@ services:
       GREENMAIL_HOST: greenmail
       GREENMAIL_SMTP_PORT: "3025"
       GREENMAIL_IMAP_PORT: "3143"
+      # The Bruno collection and Playwright suite log in many times per run from a single
+      # container IP, which would otherwise trip the "auth" rate limit policy (#45).
+      RateLimiting__Auth__PermitLimit: "1000"
     ports:
       - "7273:8080"
     depends_on:
-      - postgres
-      - greenmail
+      postgres:
+        condition: service_healthy
+      greenmail:
+        condition: service_started
 
   bruno:
     build:
@@ -51,7 +61,7 @@ services:
       BASE_URL: http://api:8080
       CI: "true"
       ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: admin@feirb.local
+      ADMIN_PASSWORD: password
     depends_on:
       - api
     volumes:

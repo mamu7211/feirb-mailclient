@@ -4,7 +4,9 @@
 FROM docker.io/library/node:22-alpine
 
 RUN apk add --no-cache curl
-RUN npm install -g @usebruno/cli
+# Pin to the current major so a future @usebruno/cli release doesn't silently change
+# runner behavior (e.g. cookie handling, reporting) out from under this test suite.
+RUN npm install -g @usebruno/cli@4
 
 WORKDIR /app
 COPY tests/bruno/ .

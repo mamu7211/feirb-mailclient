@@ -14,9 +14,19 @@ public static class TestWebApplicationFactory
 {
     public static WebApplicationFactory<Program> Create(
         string dbName,
-        IClassificationService? classificationServiceOverride = null) =>
+        IClassificationService? classificationServiceOverride = null,
+        bool useRealChatClient = false) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            // The "auth" / "auth-refresh" rate limiting policies (#45) partition by client IP,
+            // which is typically null/"unknown" for the in-memory TestServer — meaning every
+            // request across a factory instance shares one partition per policy. Tests that log
+            // in or refresh repeatedly would otherwise trip the production defaults. Use a high
+            // ceiling here; rate-limit tests override it to a low value explicitly (see
+            // RateLimitingTests).
+            builder.UseSetting("RateLimiting:Auth:PermitLimit", "100000");
+            builder.UseSetting("RateLimiting:AuthRefresh:PermitLimit", "100000");
+
             builder.ConfigureServices(services =>
             {
                 if (classificationServiceOverride is not null)
@@ -28,12 +38,19 @@ public static class TestWebApplicationFactory
                 // Replace IChatClient registrations (the Aspire/OllamaSharp client requires
                 // a real connection string that doesn't exist in tests). Tests that exercise
                 // classification provide their own IClassificationService stub above.
-                var chatClientDescriptors = services
-                    .Where(d => d.ServiceType == typeof(IChatClient))
-                    .ToList();
-                foreach (var d in chatClientDescriptors)
-                    services.Remove(d);
-                services.AddSingleton<IChatClient>(new NoopChatClient());
+                // useRealChatClient keeps Program.cs's real AddOllamaApiClient(...) registration,
+                // which throws InvalidOperationException on first resolution when unconfigured —
+                // used to reproduce/guard against that failure surfacing as a 500 (see
+                // MessageEndpointsTests.ClassifyMessage_NotFound_Returns404EvenWithUnconfiguredChatClientAsync).
+                if (!useRealChatClient)
+                {
+                    var chatClientDescriptors = services
+                        .Where(d => d.ServiceType == typeof(IChatClient))
+                        .ToList();
+                    foreach (var d in chatClientDescriptors)
+                        services.Remove(d);
+                    services.AddSingleton<IChatClient>(new NoopChatClient());
+                }
 
                 // Replace PostgreSQL with in-memory database
                 var dbDescriptors = services.Where(d =>
