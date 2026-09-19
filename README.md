@@ -78,7 +78,7 @@ This seeds the database with:
 
 The seeding is idempotent — it checks whether the data already exists and skips if so.
 
-> **Production safety:** Seeding is blocked when `ASPNETCORE_ENVIRONMENT=Production`, even if `FEIRB_SEED_DATA=true` is set. Seeded accounts use well-known credentials and must never reach a production deployment.
+> **Production safety:** Seeding only runs in the Development environment; any other environment refuses to start when `FEIRB_SEED_DATA=true` is set. Seeded accounts use well-known credentials and must never reach a production deployment.
 
 ## Component Showcase
 
