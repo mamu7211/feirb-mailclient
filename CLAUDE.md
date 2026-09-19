@@ -117,7 +117,7 @@ Shell scripts in `.claude/skills/dev-harness/` for autonomous app interaction:
 
 ## Seeded Dev Data (`FEIRB_SEED_DATA=true`)
 
-- **Users:** `admin` / `admin@feirb.local` / password: `admin@feirb.local` (admin), `alice` / `alice@feirb.local` / password: `alice@feirb.local` (user)
+- **Users:** username `admin` (email `admin@feirb.local`, admin) and `alice` (email `alice@feirb.local`, user), both with password `password`. Log in with the **username**, not the email address
 - **Mailboxes:** One per user, connected to GreenMail
 - **Labels:** Newsletter, Work, Personal (admin)
 - **Classification rule:** Basic newsletter/work/personal rule (admin)
