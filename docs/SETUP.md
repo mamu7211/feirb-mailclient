@@ -51,7 +51,7 @@ The commands below target Debian/Ubuntu. Equivalents exist for every tool on mac
 
 ```bash
 sudo apt update
-sudo apt install -y git curl python3 postgresql-client libfontconfig1
+sudo apt install -y git curl python3 postgresql-client libfontconfig1 libnss3-tools
 ```
 
 ### 2. .NET 10 SDK
@@ -118,13 +118,25 @@ git config --global user.email "you@example.com"
 
 The repository is cloned via SSH (`git@github.com:mamu7211/feirb-mailclient.git`), so add an SSH key to your GitHub account first ([guide](https://docs.github.com/authentication/connecting-to-github-with-ssh)). For issue/PR work install the [GitHub CLI](https://github.com/cli/cli#installation) and run `gh auth login`.
 
-### 7. Trust the ASP.NET Core dev certificate (optional)
+### 7. Trust the ASP.NET Core dev certificate
+
+Without a trusted development certificate the Aspire Dashboard shows the warning **"No trusted development certificate"** and browsers warn about `https://localhost:7272` and `https://localhost:18888`. On Linux this takes three parts:
 
 ```bash
+# 1. certutil, so .NET can also register the certificate in browser (NSS) databases
+sudo apt install -y libnss3-tools
+
+# 2. Tell OpenSSL-based clients where the trusted dev certificate lives (add to ~/.bashrc)
+export SSL_CERT_DIR="/usr/lib/ssl/certs:$HOME/.aspnet/dev-certs/trust"
+
+# 3. Create and trust the certificate (open a new shell first so the variable is set)
 dotnet dev-certs https --trust
+dotnet dev-certs https --check --trust   # must report a trusted certificate
 ```
 
-On Linux this only covers some clients; browsers may still warn about `https://localhost:7272`. The dev-harness scripts use `curl -k` and the Playwright MCP runs with `--ignore-https-errors`, so nothing depends on it.
+Restart your browser and Aspire afterwards. If you use the Aspire CLI, `aspire certs trust` does the same; `aspire certs clean` followed by `aspire certs trust` resets a broken setup. Snap-packaged browsers keep their own certificate database and may still warn.
+
+The dev-harness scripts use `curl -k` and the Playwright MCP runs with `--ignore-https-errors`, so they work without a trusted certificate. On macOS and Windows `dotnet dev-certs https --trust` alone is enough.
 
 ## Clone & First Run
 
@@ -320,6 +332,10 @@ docker info      # or: podman info
 ```
 
 With Podman, make sure `ASPIRE_CONTAINER_RUNTIME=podman` is exported in the shell that starts Aspire. With Docker on Linux, your user must be in the `docker` group (log out and back in after `sudo usermod -aG docker "$USER"`).
+
+### "No trusted development certificate" in the Aspire Dashboard
+
+`dotnet dev-certs https --check --trust` reports "none of them is trusted" and the dashboard shows the warning. On Linux the usual causes are a missing `certutil` (`sudo apt install libnss3-tools`) or `SSL_CERT_DIR` not containing `$HOME/.aspnet/dev-certs/trust` in the shell that started Aspire. Follow [step 7](#7-trust-the-aspnet-core-dev-certificate) and run `dotnet dev-certs https --trust` again.
 
 ### `aspire`, `dotnet` or `npx` not found
 
