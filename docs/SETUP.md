@@ -249,7 +249,7 @@ The seeding is idempotent — it checks whether the data already exists and skip
 
 > **Log in with the username, not the email address.** The login only looks up `Username`. The mailbox credentials in the table above (email address as username and password) are the GreenMail IMAP/SMTP account, not the Feirb login.
 
-> **Production safety:** `DatabaseSeeder` refuses to run when `ASPNETCORE_ENVIRONMENT=Production`, even if `FEIRB_SEED_DATA=true` is set. Seeded accounts use well-known credentials and are intended for development and testing only. Attempting to seed in Production raises an exception and stops application startup.
+> **Production safety:** `DatabaseSeeder` only runs in the Development environment; any other environment refuses to start when `FEIRB_SEED_DATA=true` is set. Seeded accounts use well-known credentials and are intended for development and testing only. Attempting to seed outside Development raises an exception and stops application startup.
 
 ## Development Workflow
 

@@ -166,8 +166,16 @@ public class DatabaseSeederTests
         mailboxes.Should().HaveCount(2);
     }
 
-    [Fact]
-    public async Task SeedAsync_ProductionEnvironment_ThrowsAndSeedsNothingAsync()
+    // Decision for #157: seeding is only allowed in Development. Previously (#264) this guard only
+    // blocked Production and a test (SeedAsync_NonProductionEnvironments_SeedsSuccessfullyAsync)
+    // asserted that Staging and Testing could seed successfully. That expectation is now reversed:
+    // every environment other than Development must refuse to seed.
+    [Theory]
+    [InlineData("Staging")]
+    [InlineData("Testing")]
+    [InlineData("Production")]
+    [InlineData("QualityAssurance")]
+    public async Task SeedAsync_NonDevelopmentEnvironments_ThrowsAndSeedsNothingAsync(string environmentName)
     {
         using var db = CreateInMemoryContext();
 
@@ -176,31 +184,13 @@ public class DatabaseSeederTests
             CreateLogger(),
             CreateDataProtection(),
             CreateConfiguration(),
-            CreateEnvironment(Environments.Production));
+            CreateEnvironment(environmentName));
 
         await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("*Production*");
+            .WithMessage($"*{environmentName}*");
 
         (await db.Users.CountAsync()).Should().Be(0);
         (await db.Mailboxes.CountAsync()).Should().Be(0);
         (await db.SmtpSettings.CountAsync()).Should().Be(0);
-    }
-
-    [Theory]
-    [InlineData("Development")]
-    [InlineData("Staging")]
-    [InlineData("Testing")]
-    public async Task SeedAsync_NonProductionEnvironments_SeedsSuccessfullyAsync(string environmentName)
-    {
-        using var db = CreateInMemoryContext();
-
-        await DatabaseSeeder.SeedAsync(
-            db,
-            CreateLogger(),
-            CreateDataProtection(),
-            CreateConfiguration(),
-            CreateEnvironment(environmentName));
-
-        (await db.Users.CountAsync()).Should().Be(2);
     }
 }
