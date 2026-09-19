@@ -3,6 +3,7 @@ using Feirb.Api.Data.Entities;
 using Feirb.Api.Resources;
 using Feirb.Api.Services;
 using Feirb.Shared.Auth;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
@@ -13,13 +14,22 @@ public static class AuthEndpoints
 {
     public static RouteGroupBuilder MapAuthEndpoints(this RouteGroupBuilder group)
     {
-        group.MapPost("/register", RegisterAsync);
-        group.MapPost("/login", LoginAsync);
-        group.MapPost("/refresh", RefreshAsync);
+        // Rate limited (policy "auth", #45): credential/token guessing surface.
+        group.MapPost("/register", RegisterAsync).RequireRateLimiting("auth");
+        group.MapPost("/login", LoginAsync).RequireRateLimiting("auth");
+        group.MapPost("/request-reset", RequestResetAsync).RequireRateLimiting("auth");
+        group.MapGet("/validate-reset-token/{token}", ValidateResetTokenAsync).RequireRateLimiting("auth");
+        group.MapPost("/reset-password", ResetPasswordAsync).RequireRateLimiting("auth");
+
+        // Rate limited under its own, more generous policy ("auth-refresh", #45): the frontend's
+        // AuthDelegatingHandler calls this on every 401 without de-duplication, so several widgets
+        // loading in parallel after an access token expires can burst several concurrent refresh
+        // calls from one IP. It still needs a limit (refresh tokens are guessable/replayable
+        // credentials too), just not the same tight one as login/register.
+        group.MapPost("/refresh", RefreshAsync).RequireRateLimiting("auth-refresh");
+
+        // Not rate limited: clearing a session cookie is not a credential-guessing target.
         group.MapPost("/logout", LogoutAsync);
-        group.MapPost("/request-reset", RequestResetAsync);
-        group.MapGet("/validate-reset-token/{token}", ValidateResetTokenAsync);
-        group.MapPost("/reset-password", ResetPasswordAsync);
         return group;
     }
 

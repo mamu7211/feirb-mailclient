@@ -358,6 +358,40 @@ Settings are managed via `appsettings.json` and `appsettings.Development.json` i
 
 `appsettings.json` ships a public placeholder key (`Jwt:Key`, starting with `CHANGE-ME`) that is only meant for local development. Outside the `Development` environment the API refuses to start while this placeholder is in use, because anyone who knows it could forge login tokens. Set your own key of at least 32 characters, for example via the environment variable `Jwt__Key`.
 
+### Rate Limiting
+
+Anonymous authentication endpoints are rate limited per client IP to mitigate brute-force and credential-stuffing attempts, using two separate fixed-window limiters:
+
+- **`RateLimiting:Auth`** (policy `"auth"`) — `login`, `register`, `request-reset`, `reset-password`, `validate-reset-token`, and the setup wizard's `test-smtp` connection check. Production/base default: `PermitLimit: 10`, `WindowSeconds: 60`.
+- **`RateLimiting:AuthRefresh`** (policy `"auth-refresh"`) — `refresh` only, kept separate and more generous (`PermitLimit: 60`, `WindowSeconds: 60`) because the frontend's `AuthDelegatingHandler` (`src/Feirb.Web/Http/AuthDelegatingHandler.cs`) calls `/api/auth/refresh` on every `401` without de-duplication — several widgets loading in parallel after an access token expires can burst several concurrent refresh calls from one IP. The two policies use fully independent buckets: exhausting one never blocks the other.
+
+```json
+"RateLimiting": {
+  "Auth": {
+    "PermitLimit": 10,
+    "WindowSeconds": 60
+  },
+  "AuthRefresh": {
+    "PermitLimit": 60,
+    "WindowSeconds": 60
+  }
+}
+```
+
+Requests beyond a policy's `PermitLimit` within its `WindowSeconds` receive `HTTP 429 Too Many Requests` with a `Retry-After` header. Override the values via environment variables (e.g. `RateLimiting__Auth__PermitLimit`, `RateLimiting__AuthRefresh__PermitLimit`) if you need a different limit for a particular environment.
+
+The rate limit partitions by `HttpContext.Connection.RemoteIpAddress` only; it does not read `X-Forwarded-For` or other proxy headers, since trusting those safely is an open deployment question (see #158/#159). Running behind a reverse proxy currently means all requests appear to come from the proxy's IP and share one limiter bucket per policy.
+
+**Per-environment overrides:**
+
+| Environment | `RateLimiting:Auth:PermitLimit` | Why |
+|---|---|---|
+| Production / base `appsettings.json` | 10 / min | Brute-force protection default |
+| `Development` (`appsettings.Development.json`) | 100 / min | A full local Bruno run (`npx @usebruno/cli run --env local`, see below) issues 14+ requests against `"auth"`-policy endpoints in one pass; the base default of 10/min would trip `429`s against the Aspire dev workflow |
+| Containerized test stack (`tests/docker-compose.test.yml`, `RateLimiting__Auth__PermitLimit=1000`) | 1000 / min | Bruno and Playwright both log in many times per run from the single container IP |
+
+If you still hit `429` during local development (e.g. running Bruno repeatedly against a long-lived Aspire session), raise `RateLimiting__Auth__PermitLimit` further via an environment variable for your session.
+
 ### Sensitive Values
 
 Use .NET User Secrets for local sensitive configuration:

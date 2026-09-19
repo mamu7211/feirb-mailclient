@@ -1,11 +1,17 @@
+using System.Globalization;
 using System.Text;
+using System.Threading.RateLimiting;
 using Feirb.Api.Data;
 using Feirb.Api.Endpoints;
+using Feirb.Api.Resources;
 using Feirb.Api.Services;
 using Feirb.Shared;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Localization;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Quartz;
 using Scalar.AspNetCore;
@@ -84,6 +90,59 @@ builder.Services.AddLocalization();
 // IMAP sync configuration
 builder.Services.Configure<ImapSyncSettings>(builder.Configuration.GetSection(ImapSyncSettings.SectionName));
 
+// Rate limiting configuration for anonymous auth endpoints (#45).
+// "auth" (login, register, password reset, SMTP connection test) and "auth-refresh" (token
+// refresh) are two separate named instances of the same options class — refresh gets its own,
+// more generous bucket because the frontend calls it on every 401 without de-duplication.
+builder.Services.Configure<AuthRateLimitSettings>(builder.Configuration.GetSection(AuthRateLimitSettings.SectionName));
+builder.Services.Configure<AuthRateLimitSettings>(
+    AuthRateLimitSettings.RefreshOptionsName, builder.Configuration.GetSection(AuthRateLimitSettings.RefreshSectionName));
+builder.Services.AddRateLimiter(options =>
+{
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
+        if (context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter))
+        {
+            context.HttpContext.Response.Headers.RetryAfter =
+                ((int)retryAfter.TotalSeconds).ToString(CultureInfo.InvariantCulture);
+        }
+
+        var localizer = context.HttpContext.RequestServices.GetRequiredService<IStringLocalizer<ApiMessages>>();
+        await context.HttpContext.Response.WriteAsJsonAsync(
+            new { message = localizer["TooManyRequests"].Value },
+            cancellationToken: cancellationToken);
+    };
+
+    // Partitioned by client IP, fixed window. This intentionally reads the direct connection
+    // IP only — reverse-proxy / X-Forwarded-For support is an open deployment question
+    // (see #158/#159) and is not handled here to avoid trusting spoofable headers by default.
+    static RateLimitPartition<string> BuildIpPartition(HttpContext httpContext, AuthRateLimitSettings settings)
+    {
+        var partitionKey = httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(partitionKey, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = settings.PermitLimit,
+            Window = TimeSpan.FromSeconds(settings.WindowSeconds),
+            QueueLimit = 0,
+        });
+    }
+
+    options.AddPolicy("auth", httpContext =>
+    {
+        var settings = httpContext.RequestServices.GetRequiredService<IOptions<AuthRateLimitSettings>>().Value;
+        return BuildIpPartition(httpContext, settings);
+    });
+
+    options.AddPolicy("auth-refresh", httpContext =>
+    {
+        var settings = httpContext.RequestServices
+            .GetRequiredService<IOptionsMonitor<AuthRateLimitSettings>>()
+            .Get(AuthRateLimitSettings.RefreshOptionsName);
+        return BuildIpPartition(httpContext, settings);
+    });
+});
+
 // Quartz.NET scheduler
 builder.Services.AddQuartz();
 builder.Services.AddQuartzHostedService(options => options.WaitForJobsToComplete = true);
@@ -140,6 +199,7 @@ app.UseRequestLocalization(options =>
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapOpenApi();
 app.MapScalarApiReference();

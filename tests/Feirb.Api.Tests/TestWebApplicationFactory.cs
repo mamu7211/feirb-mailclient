@@ -18,6 +18,15 @@ public static class TestWebApplicationFactory
         bool useRealChatClient = false) =>
         new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            // The "auth" / "auth-refresh" rate limiting policies (#45) partition by client IP,
+            // which is typically null/"unknown" for the in-memory TestServer — meaning every
+            // request across a factory instance shares one partition per policy. Tests that log
+            // in or refresh repeatedly would otherwise trip the production defaults. Use a high
+            // ceiling here; rate-limit tests override it to a low value explicitly (see
+            // RateLimitingTests).
+            builder.UseSetting("RateLimiting:Auth:PermitLimit", "100000");
+            builder.UseSetting("RateLimiting:AuthRefresh:PermitLimit", "100000");
+
             builder.ConfigureServices(services =>
             {
                 if (classificationServiceOverride is not null)
