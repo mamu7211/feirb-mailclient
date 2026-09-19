@@ -5,6 +5,11 @@ services:
       POSTGRES_USER: feirb
       POSTGRES_PASSWORD: feirb
       POSTGRES_DB: feirb
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U feirb -d feirb"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
 
   greenmail:
     image: docker.io/greenmail/standalone
@@ -33,8 +38,10 @@ services:
     ports:
       - "7273:8080"
     depends_on:
-      - postgres
-      - greenmail
+      postgres:
+        condition: service_healthy
+      greenmail:
+        condition: service_started
 
   bruno:
     build:
