@@ -69,8 +69,10 @@ FEIRB_SEED_DATA=true dotnet run --project src/Feirb.AppHost
 ```
 
 This seeds the database with:
-- **Admin user:** `admin@feirb.local` / `admin@feirb.local` (password)
-- **Alice user:** `alice@feirb.local` / `alice@feirb.local` (password)
+- **Admin user:** username `admin` (email `admin@feirb.local`), password `password`
+- **Alice user:** username `alice` (email `alice@feirb.local`), password `password`
+
+> **Log in with the username, not the email address.** The login form and `POST /api/auth/login` only look up `Username`.
 - **SMTP settings:** GreenMail on `localhost:3025` (no TLS, no auth), from address `noreply@feirb.local`
 - **Mailboxes:** One per user, IMAP on `localhost:3143`, SMTP on `localhost:3025`
 

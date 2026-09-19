@@ -218,17 +218,17 @@ When started via `.claude/skills/dev-harness/start.sh --seeding` (or with `FEIRB
 
 | Data | Value |
 |------|-------|
-| Admin email | `admin@feirb.local` |
-| Admin password | `admin@feirb.local` |
-| Alice email | `alice@feirb.local` |
-| Alice password | `alice@feirb.local` |
+| Admin login | username `admin`, password `password` (email: `admin@feirb.local`) |
+| Alice login | username `alice`, password `password` (email: `alice@feirb.local`) |
 | System SMTP | `localhost:3025` (GreenMail) |
 | SMTP from address | `noreply@feirb.local` |
 | TLS / Auth | disabled |
 | IMAP host | `localhost:3143` (GreenMail) |
 | Mailbox credentials | email address as both username and password |
 
-The seeding is idempotent — it checks whether the data already exists and skips if so.
+The seeding is idempotent — it checks whether the data already exists and skips if so. That means it does **not** reset the credentials of users that already exist: if you completed the setup wizard before, or seeded with an older version, log in with the credentials you chose then, or reset the database with `.claude/skills/dev-harness/cleanup.sh` and start again.
+
+> **Log in with the username, not the email address.** The login only looks up `Username`. The mailbox credentials in the table above (email address as username and password) are the GreenMail IMAP/SMTP account, not the Feirb login.
 
 > **Production safety:** `DatabaseSeeder` refuses to run when `ASPNETCORE_ENVIRONMENT=Production`, even if `FEIRB_SEED_DATA=true` is set. Seeded accounts use well-known credentials and are intended for development and testing only. Attempting to seed in Production raises an exception and stops application startup.
 
