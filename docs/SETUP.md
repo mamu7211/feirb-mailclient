@@ -107,6 +107,8 @@ nvm install --lts
 node --version && npx --version
 ```
 
+Node.js is needed on the host for the Claude Code MCP servers and for running the Bruno and Playwright suites outside containers (see step 8). The .NET build, the unit tests and the dev-harness scripts work without it.
+
 ### 6. Git identity and GitHub access
 
 Set your commit identity once (commits fail with "Author identity unknown" otherwise):
@@ -125,6 +127,22 @@ dotnet dev-certs https --trust
 ```
 
 On Linux this only covers some clients; browsers may still warn about `https://localhost:7272`. The dev-harness scripts use `curl -k` and the Playwright MCP runs with `--ignore-https-errors`, so nothing depends on it.
+
+### 8. Test tooling: Bruno and Playwright (optional)
+
+The repository has two test suites beyond the xUnit tests: Bruno (API contract tests in `tests/bruno`) and Playwright (browser E2E tests in `tests/playwright`). You have two options:
+
+- **In containers, nothing to install besides Docker/Podman:** `tests/run-tests.sh` builds and runs both suites in their own containers (needs `docker compose` or `podman-compose`).
+- **On the host against a running instance:** requires Node.js from step 5.
+
+```bash
+# Playwright: install the dependencies and the Chromium browser once
+cd tests/playwright
+npm ci
+npx playwright install --with-deps chromium   # --with-deps installs system libraries via sudo
+```
+
+Bruno needs no installation: `npx @usebruno/cli` fetches the CLI on first use. How to run the suites is described under [Running Tests](#running-tests).
 
 ## Clone & First Run
 
@@ -166,6 +184,7 @@ psql --version
 python3 --version
 node --version          # optional
 dotnet test             # unit tests use in-memory databases, no containers required
+tests/run-tests.sh      # optional: Bruno + Playwright in containers (slow on first run)
 dotnet format --verify-no-changes
 ```
 
