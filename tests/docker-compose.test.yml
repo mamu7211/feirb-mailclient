@@ -51,7 +51,7 @@ services:
       BASE_URL: http://api:8080
       CI: "true"
       ADMIN_USERNAME: admin
-      ADMIN_PASSWORD: admin@feirb.local
+      ADMIN_PASSWORD: password
     depends_on:
       - api
     volumes:
