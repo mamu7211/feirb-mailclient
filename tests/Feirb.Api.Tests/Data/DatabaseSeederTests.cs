@@ -167,6 +167,42 @@ public class DatabaseSeederTests
     }
 
     [Fact]
+    public async Task SeedAsync_EmptyDatabase_SetsBadgeColorOnSeededMailboxesAsync()
+    {
+        using var db = CreateInMemoryContext();
+
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), CreateDataProtection(), CreateConfiguration(), CreateEnvironment());
+
+        var mailboxes = await db.Mailboxes.OrderBy(m => m.EmailAddress).ToListAsync();
+        mailboxes.Should().HaveCount(2);
+        mailboxes[0].EmailAddress.Should().Be("admin@feirb.local");
+        mailboxes[0].BadgeColor.Should().Be("#4A90D9");
+        mailboxes[1].EmailAddress.Should().Be("alice@feirb.local");
+        mailboxes[1].BadgeColor.Should().Be("#E67E22");
+    }
+
+    [Fact]
+    public async Task SeedAsync_MailboxAlreadyExistsWithCustomBadgeColor_DoesNotOverwriteBadgeColorAsync()
+    {
+        using var db = CreateInMemoryContext();
+        var dp = CreateDataProtection();
+
+        // First seed creates the default mailboxes (with the default badge colors)
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration(), CreateEnvironment());
+
+        // Simulate the user picking a custom badge color for their mailbox
+        var adminMailbox = await db.Mailboxes.SingleAsync(m => m.EmailAddress == "admin@feirb.local");
+        adminMailbox.BadgeColor = "#123456";
+        await db.SaveChangesAsync();
+
+        // Re-running the seeder (e.g. on application restart) must not touch the existing mailbox
+        await DatabaseSeeder.SeedAsync(db, CreateLogger(), dp, CreateConfiguration(), CreateEnvironment());
+
+        var reloaded = await db.Mailboxes.SingleAsync(m => m.EmailAddress == "admin@feirb.local");
+        reloaded.BadgeColor.Should().Be("#123456");
+    }
+
+    [Fact]
     public async Task SeedAsync_ProductionEnvironment_ThrowsAndSeedsNothingAsync()
     {
         using var db = CreateInMemoryContext();

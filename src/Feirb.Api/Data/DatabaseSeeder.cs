@@ -186,6 +186,7 @@ internal static class DatabaseSeeder
             Name = user.Email,
             EmailAddress = user.Email,
             DisplayName = user.Username[0..1].ToUpperInvariant() + user.Username[1..],
+            BadgeColor = badgeColor,
             ImapHost = mailHost,
             ImapPort = imapPort,
             ImapUsername = user.Email,
