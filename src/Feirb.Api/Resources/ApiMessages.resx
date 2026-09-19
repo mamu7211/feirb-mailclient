@@ -222,4 +222,7 @@
   <data name="ClassificationAiUnavailable" xml:space="preserve">
     <value>AI classification service is unavailable. Please try again later.</value>
   </data>
+  <data name="TooManyRequests" xml:space="preserve">
+    <value>Too many requests. Please try again later.</value>
+  </data>
 </root>

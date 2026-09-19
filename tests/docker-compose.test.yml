@@ -30,6 +30,9 @@ services:
       GREENMAIL_HOST: greenmail
       GREENMAIL_SMTP_PORT: "3025"
       GREENMAIL_IMAP_PORT: "3143"
+      # The Bruno collection and Playwright suite log in many times per run from a single
+      # container IP, which would otherwise trip the "auth" rate limit policy (#45).
+      RateLimiting__Auth__PermitLimit: "1000"
     ports:
       - "7273:8080"
     depends_on:

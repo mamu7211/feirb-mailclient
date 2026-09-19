@@ -5,6 +5,7 @@ using Feirb.Api.Services;
 using Feirb.Shared.Setup;
 using MailKit.Net.Smtp;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Localization;
 
@@ -17,7 +18,10 @@ public static class SetupEndpoints
     {
         group.MapGet("/status", GetStatusAsync);
         group.MapPost("/complete", CompleteSetupAsync);
-        group.MapPost("/test-smtp", TestSmtpAsync);
+
+        // Rate limited (policy "auth", #45): anonymous endpoint that opens outbound SMTP
+        // connections with attacker-supplied host/credentials — a brute-force/SSRF-probing surface.
+        group.MapPost("/test-smtp", TestSmtpAsync).RequireRateLimiting("auth");
         return group;
     }
 
