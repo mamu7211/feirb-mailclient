@@ -16,7 +16,6 @@ public class ImapSyncService(
     IOptions<ImapSyncSettings> syncSettings,
     IAddressExtractor addressExtractor) : IImapSyncService
 {
-    private const string _imapPasswordPurpose = "MailboxImapPassword";
     private readonly int _saveBatchSize = syncSettings.Value.SaveBatchSize;
 
     public async Task SyncMailboxAsync(Guid mailboxId, CancellationToken cancellationToken = default)
@@ -43,7 +42,7 @@ public class ImapSyncService(
 
         try
         {
-            var protector = dataProtection.CreateProtector(_imapPasswordPurpose);
+            var protector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxImapPassword);
             var password = protector.Unprotect(mailbox.ImapEncryptedPassword);
 
             using var client = new ImapClient();

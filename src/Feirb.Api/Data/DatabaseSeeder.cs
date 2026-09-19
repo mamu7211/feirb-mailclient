@@ -6,8 +6,6 @@ namespace Feirb.Api.Data;
 
 internal static class DatabaseSeeder
 {
-    private const string _imapPasswordPurpose = "MailboxImapPassword";
-    private const string _smtpPasswordPurpose = "MailboxSmtpPassword";
     private const string _imapSyncJobType = "imap-sync";
 
     public static async Task SeedAsync(FeirbDbContext db, ILogger logger, IDataProtectionProvider dataProtection, IConfiguration configuration, IHostEnvironment environment)
@@ -178,8 +176,8 @@ internal static class DatabaseSeeder
         if (await db.Mailboxes.AnyAsync(m => m.UserId == user.Id))
             return false;
 
-        var imapProtector = dataProtection.CreateProtector(_imapPasswordPurpose);
-        var smtpProtector = dataProtection.CreateProtector(_smtpPasswordPurpose);
+        var imapProtector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxImapPassword);
+        var smtpProtector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxSmtpPassword);
 
         db.Mailboxes.Add(new Mailbox
         {
