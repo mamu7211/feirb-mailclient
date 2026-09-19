@@ -110,6 +110,29 @@ public class MailboxEndpointsTests : IDisposable
         mailbox.SmtpPort.Should().Be(587);
     }
 
+    [Fact]
+    public async Task CreateMailbox_WithBadgeColor_PersistsColorInDetailAndListAsync()
+    {
+        var tokens = await SetupAndLoginAsAdminAsync();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+
+        var request = CreateTestRequest("Colored Mail", "colored@test.com") with { BadgeColor = "#123456" };
+        var createResponse = await _client.PostAsJsonAsync("/api/settings/mailboxes", request);
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createResponse.Content.ReadFromJsonAsync<MailboxDetailResponse>();
+        created!.BadgeColor.Should().Be("#123456");
+
+        // GET single mailbox returns the persisted color
+        var getResponse = await _client.GetAsync($"/api/settings/mailboxes/{created.Id}");
+        var fetched = await getResponse.Content.ReadFromJsonAsync<MailboxDetailResponse>();
+        fetched!.BadgeColor.Should().Be("#123456");
+
+        // GET list also returns the persisted color
+        var listResponse = await _client.GetAsync("/api/settings/mailboxes");
+        var list = await listResponse.Content.ReadFromJsonAsync<List<MailboxListResponse>>();
+        list.Should().ContainSingle(m => m.Id == created.Id && m.BadgeColor == "#123456");
+    }
+
     // --- Get Tests ---
 
     [Fact]
@@ -191,6 +214,54 @@ public class MailboxEndpointsTests : IDisposable
         var mailbox = await response.Content.ReadFromJsonAsync<MailboxDetailResponse>();
         mailbox!.Name.Should().Be("New Name");
         mailbox.EmailAddress.Should().Be("new@test.com");
+    }
+
+    [Fact]
+    public async Task UpdateMailbox_ChangesBadgeColor_PersistsNewColorInDetailAndListAsync()
+    {
+        var tokens = await SetupAndLoginAsAdminAsync();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+
+        var id = await CreateMailboxWithBadgeColorAsync("Colored", "colored2@test.com", "#123456");
+
+        var updateRequest = BuildUpdateRequest("Colored", "colored2@test.com", badgeColor: "#ABCDEF");
+        var updateResponse = await _client.PutAsJsonAsync($"/api/settings/mailboxes/{id}", updateRequest);
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await updateResponse.Content.ReadFromJsonAsync<MailboxDetailResponse>();
+        updated!.BadgeColor.Should().Be("#ABCDEF");
+
+        // GET single mailbox reflects the new color
+        var getResponse = await _client.GetAsync($"/api/settings/mailboxes/{id}");
+        var fetched = await getResponse.Content.ReadFromJsonAsync<MailboxDetailResponse>();
+        fetched!.BadgeColor.Should().Be("#ABCDEF");
+
+        // GET list also reflects the new color
+        var listResponse = await _client.GetAsync("/api/settings/mailboxes");
+        var list = await listResponse.Content.ReadFromJsonAsync<List<MailboxListResponse>>();
+        list.Should().ContainSingle(m => m.Id == id && m.BadgeColor == "#ABCDEF");
+    }
+
+    [Fact]
+    public async Task UpdateMailbox_OtherFieldsWithNullBadgeColor_ClearsBadgeColorAsync()
+    {
+        // The update contract replaces BadgeColor with whatever is sent, same as
+        // every other optional field (e.g. DisplayName) — it is not a "leave unchanged
+        // if null" merge-patch. The frontend is responsible for round-tripping the
+        // current value. This test documents/locks in that intended behavior.
+        var tokens = await SetupAndLoginAsAdminAsync();
+        _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", tokens.AccessToken);
+
+        var id = await CreateMailboxWithBadgeColorAsync("Colored", "colored3@test.com", "#123456");
+
+        var updateRequest = BuildUpdateRequest("Colored Renamed", "colored3@test.com", badgeColor: null);
+        var updateResponse = await _client.PutAsJsonAsync($"/api/settings/mailboxes/{id}", updateRequest);
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await updateResponse.Content.ReadFromJsonAsync<MailboxDetailResponse>();
+        updated!.BadgeColor.Should().BeNull();
+
+        var getResponse = await _client.GetAsync($"/api/settings/mailboxes/{id}");
+        var fetched = await getResponse.Content.ReadFromJsonAsync<MailboxDetailResponse>();
+        fetched!.BadgeColor.Should().BeNull();
     }
 
     [Fact]
@@ -280,4 +351,18 @@ public class MailboxEndpointsTests : IDisposable
         var mailbox = await response.Content.ReadFromJsonAsync<MailboxDetailResponse>();
         return mailbox!.Id;
     }
+
+    private async Task<Guid> CreateMailboxWithBadgeColorAsync(string name, string email, string badgeColor)
+    {
+        var request = CreateTestRequest(name, email) with { BadgeColor = badgeColor };
+        var response = await _client.PostAsJsonAsync("/api/settings/mailboxes", request);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+        var mailbox = await response.Content.ReadFromJsonAsync<MailboxDetailResponse>();
+        return mailbox!.Id;
+    }
+
+    private static UpdateMailboxRequest BuildUpdateRequest(string name, string email, string? badgeColor) =>
+        new(name, email, null, badgeColor,
+            "imap.test.com", 993, "user@test.com", null, TlsMode.Auto,
+            "smtp.test.com", 587, "user@test.com", null, TlsMode.Auto, true);
 }
