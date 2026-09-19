@@ -1,6 +1,6 @@
 # Feirb — API Reference
 
-Base URL: `https://localhost:7200`
+Base URL: `https://localhost:7272`
 
 All endpoints return JSON. Error responses use [RFC 7807 Problem Details](https://datatracker.ietf.org/doc/html/rfc7807).
 
