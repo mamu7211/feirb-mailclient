@@ -12,8 +12,6 @@ namespace Feirb.Api.Endpoints;
 
 public static class MailboxEndpoints
 {
-    private const string _imapPasswordPurpose = "MailboxImapPassword";
-    private const string _smtpPasswordPurpose = "MailboxSmtpPassword";
     private const string _imapSyncJobType = "imap-sync";
     private const string _defaultSyncCron = "0 0 * * * ?"; // hourly
 
@@ -50,8 +48,8 @@ public static class MailboxEndpoints
         IJobService jobService)
     {
         var userId = GetCurrentUserId(httpContext);
-        var imapProtector = dataProtection.CreateProtector(_imapPasswordPurpose);
-        var smtpProtector = dataProtection.CreateProtector(_smtpPasswordPurpose);
+        var imapProtector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxImapPassword);
+        var smtpProtector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxSmtpPassword);
 
         var mailbox = new Mailbox
         {
@@ -136,8 +134,8 @@ public static class MailboxEndpoints
         if (mailbox is null)
             return Results.NotFound(new { message = localizer["MailboxNotFound"].Value });
 
-        var imapProtector = dataProtection.CreateProtector(_imapPasswordPurpose);
-        var smtpProtector = dataProtection.CreateProtector(_smtpPasswordPurpose);
+        var imapProtector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxImapPassword);
+        var smtpProtector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxSmtpPassword);
 
         mailbox.Name = request.Name;
         mailbox.EmailAddress = request.EmailAddress;

@@ -16,8 +16,6 @@ public class MailSendingService(
     IAddressExtractor addressExtractor,
     ILogger<MailSendingService> logger) : IMailSendingService
 {
-    private const string _smtpPasswordPurpose = "MailboxSmtpPassword";
-    private const string _imapPasswordPurpose = "MailboxImapPassword";
 
     public async Task<string> SendMailAsync(Guid userId, SendMailRequest request, CancellationToken cancellationToken = default)
     {
@@ -86,7 +84,7 @@ public class MailSendingService(
 
         if (mailbox.SmtpRequiresAuth && !string.IsNullOrEmpty(mailbox.SmtpEncryptedPassword))
         {
-            var protector = dataProtection.CreateProtector(_smtpPasswordPurpose);
+            var protector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxSmtpPassword);
             var password = protector.Unprotect(mailbox.SmtpEncryptedPassword);
             await client.AuthenticateAsync(mailbox.SmtpUsername, password, cancellationToken);
         }
@@ -109,7 +107,7 @@ public class MailSendingService(
             var imapOptions = TlsModeConverter.ToSecureSocketOptions(mailbox.ImapTlsMode);
             await client.ConnectAsync(mailbox.ImapHost, mailbox.ImapPort, imapOptions, cancellationToken);
 
-            var protector = dataProtection.CreateProtector(_imapPasswordPurpose);
+            var protector = dataProtection.CreateProtector(DataProtectionPurposes.MailboxImapPassword);
             var password = protector.Unprotect(mailbox.ImapEncryptedPassword);
             await client.AuthenticateAsync(mailbox.ImapUsername, password, cancellationToken);
 
