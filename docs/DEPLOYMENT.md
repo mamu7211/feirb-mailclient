@@ -9,23 +9,21 @@
 The only supported way to run Feirb is through .NET Aspire, which orchestrates all services locally:
 
 ```bash
-dotnet workload install aspire
 dotnet restore Feirb.sln
 dotnet run --project src/Feirb.AppHost
 ```
 
 This starts:
-- **Blazor WASM frontend** — https://localhost:7100
-- **API backend** — https://localhost:7200
-- **PostgreSQL** — localhost:5432 (Aspire-managed container)
-- **Ollama** — with qwen3:4b model (Aspire-managed container)
+- **API backend + Blazor WASM frontend** — https://localhost:7272
+- **PostgreSQL** — localhost:15432 (Aspire-managed container)
+- **Ollama** — with qwen3:0.6b development model (Aspire-managed container)
 - **GreenMail** — SMTP localhost:3025, IMAP localhost:3143, API http://localhost:8080 (dev mail server)
 - **Aspire Dashboard** — https://localhost:18888
 
 ### Requirements
 
 - .NET 10 SDK (10.0.100+)
-- Docker (for PostgreSQL, Ollama, and GreenMail containers)
+- Docker or Podman (for PostgreSQL, Ollama, and GreenMail containers)
 
 See [Developer Setup](SETUP.md) for detailed instructions.
 

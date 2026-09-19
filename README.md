@@ -40,26 +40,25 @@ Pronounced like "fire-bee", the name is simply "Brief" (German for *letter*) spe
 ## Prerequisites
 
 - [.NET 10 SDK](https://dotnet.microsoft.com/download) (10.0.100+)
-- [Docker](https://www.docker.com/) (for Aspire, Ollama, and GreenMail containers)
+- [Docker](https://www.docker.com/) or [Podman](https://podman.io/) (for the PostgreSQL, Ollama, and GreenMail containers)
 - Git
+- Optional: [Aspire CLI](https://aspire.dev/get-started/install-cli/), Node.js LTS, `psql`, Python 3, `gh` — see the [Developer Setup](docs/SETUP.md) for a step-by-step installation guide
 
 ## Quick Start
 
 ```bash
 git clone git@github.com:mamu7211/feirb-mailclient.git
 cd feirb-mailclient
-dotnet workload install aspire
 dotnet restore Feirb.sln
 dotnet run --project src/Feirb.AppHost
 ```
 
 This starts all services via Aspire:
 - **Aspire Dashboard:** https://localhost:18888
-- **Blazor Frontend:** https://localhost:7100
-- **API Backend:** https://localhost:7200
+- **Blazor Frontend + API Backend:** https://localhost:7272
 - **GreenMail API (dev):** http://localhost:8080
 
-> **Note:** On first run, the Ollama qwen3:4b model (~2.6GB) will be downloaded automatically.
+> **Note:** On first run, the Ollama development model (`qwen3:0.6b`, ~400MB) will be downloaded automatically.
 
 ### Development Quickstart with Seeded Data
 

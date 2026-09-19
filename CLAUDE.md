@@ -39,7 +39,9 @@ tests/
 ## Prerequisites
 
 - .NET 10 SDK (`dotnet --version`)
-- Podman or Docker (container runtime for Aspire-managed services)
+- Podman or Docker (container runtime for Aspire-managed services; with Podman set `ASPIRE_CONTAINER_RUNTIME=podman`)
+- Aspire CLI (`aspire`, for the `aspire` MCP server and `aspire start`). Do **not** install the obsolete Aspire workload
+- Node.js LTS (`npx`, for the Playwright/Postgres MCP servers, Playwright E2E and Bruno tests)
 - `psql` client (for direct DB queries via dev-harness)
 - Python 3 (for JSON parsing and SMTP in dev-harness scripts)
 - `gh` CLI (for GitHub issue/PR management)
@@ -56,6 +58,8 @@ dotnet build Feirb.sln
 # 3. Authenticate
 .claude/skills/dev-harness/login.sh
 ```
+
+A step-by-step installation guide for a fresh machine is in [`docs/SETUP.md`](docs/SETUP.md).
 
 Tool permissions are configured in `.claude/settings.json` (checked in) so dev-harness scripts work without manual approval.
 
