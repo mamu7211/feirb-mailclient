@@ -354,6 +354,10 @@ GreenMail provides SMTP, IMAP, and a REST API in a single container for developm
 
 Settings are managed via `appsettings.json` and `appsettings.Development.json` in each project. Aspire injects service URLs and connection strings automatically.
 
+### JWT Signing Key
+
+`appsettings.json` ships a public placeholder key (`Jwt:Key`, starting with `CHANGE-ME`) that is only meant for local development. Outside the `Development` environment the API refuses to start while this placeholder is in use, because anyone who knows it could forge login tokens. Set your own key of at least 32 characters, for example via the environment variable `Jwt__Key`.
+
 ### Sensitive Values
 
 Use .NET User Secrets for local sensitive configuration:

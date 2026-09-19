@@ -23,6 +23,16 @@ builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSett
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()
     ?? throw new InvalidOperationException("JWT settings are not configured.");
 
+// The signing key in appsettings.json is a public placeholder. Anyone who knows it can forge tokens,
+// so refuse to start with it outside Development.
+if (!builder.Environment.IsDevelopment()
+    && jwtSettings.Key.StartsWith(JwtSettings.PlaceholderKeyPrefix, StringComparison.Ordinal))
+{
+    throw new InvalidOperationException(
+        $"Jwt:Key is still the placeholder value from appsettings.json. Set a unique key of at least 32 characters " +
+        $"(e.g. via the Jwt__Key environment variable) when running in the '{builder.Environment.EnvironmentName}' environment.");
+}
+
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -147,9 +157,11 @@ var authGroup = app.MapGroup(ApiRoutes.Auth).AllowAnonymous();
 authGroup.MapAuthEndpoints();
 
 // Dev config endpoint (anonymous, returns feature flags for frontend)
-app.MapGet("/api/dev/config", (IConfiguration config) => Results.Ok(new
+// AUTO_LOGIN is only honored in Development so a stray environment variable cannot disable the login in production.
+app.MapGet("/api/dev/config", (IConfiguration config, IHostEnvironment environment) => Results.Ok(new
 {
-    AutoLogin = string.Equals(config["AUTO_LOGIN"], "true", StringComparison.OrdinalIgnoreCase)
+    AutoLogin = environment.IsDevelopment()
+        && string.Equals(config["AUTO_LOGIN"], "true", StringComparison.OrdinalIgnoreCase)
 })).AllowAnonymous();
 
 // Setup endpoints are anonymous (guarded by admin-exists check)
